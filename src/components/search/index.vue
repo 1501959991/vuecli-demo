@@ -33,20 +33,52 @@
                 movieList:[]
             }
         },
+        methods:{
+            cancelRequest(){
+                if(typeof this.source ==='function'){
+                    this.source('终止请求')
+                }
+            },
+        },
         watch:{
             msg(val){ // 监听data里 msg发生改变 就触发
                 // 利用定时器 进行函数防抖
-                clearTimeout(timer);  // 貌似防抖失败了
-                setTimeout(()=>{
-                    this.axios.get('/api/searchList?cityId=10&kw='+val).then((res)=>{
-                        var msg1 = res.data.msg;
-                        var list = res.data.data.movies;
-                        if (msg1 === 'ok' && list){  // 数据错误时候 list 不存在
-                            this.movieList = res.data.data.movies.list
-                        }
+                // clearTimeout(timer);  // 貌似防抖失败了
+                // setTimeout(()=>{
+                //     this.axios.get('/api/searchList?cityId=10&kw='+val).then((res)=>{
+                //         var msg1 = res.data.msg;
+                //         var list = res.data.data.movies;
+                //         if (msg1 === 'ok' && list){  // 数据错误时候 list 不存在
+                //             this.movieList = res.data.data.movies.list
+                //         }
+                //     })
+                // },600)
+                // ======================================
+                // 取消上一次请求
+                this.cancelRequest();
+                var that = this;
+                this.axios.get('/api/searchList?cityId=10&kw='+val, {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
+                    },
+                    cancelToken: new this.axios.CancelToken(function executor(c){
+                        that.source = c;
                     })
-                },600)
-                // ceshi
+                }).then((res) => {
+                    var msg1 = res.data.msg;
+                    var list = res.data.data.movies;
+                    if (msg1 === 'ok' && list){  // 数据错误时候 list 不存在
+                        this.movieList = res.data.data.movies.list
+                    }
+                }).catch((err) =>{
+                    if (this.axios.isCancel(err)) {
+                        console.log('Rquest canceled', err.message); //请求如果被取消，这里是返回取消的message
+                    } else {
+                        //handle error
+                        console.log(err);
+                    }
+                })
             }
         }
     }
